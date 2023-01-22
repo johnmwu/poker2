@@ -20,6 +20,12 @@ class Combo:
         else:
             raise ValueError(f'Passed {first},{second}, cannot have a combo of equal cards')
 
+    def __eq__(self, other):
+        if self.__class__ != other.__class__:
+            return NotImplemented
+        
+        return self.first==other.first and self.second==other.second
+
     @property
     def is_suited_connector(self):
         return self.is_suited and self.is_connector

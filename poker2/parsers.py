@@ -6,9 +6,10 @@ from typing import List
 from decimal import Decimal
 from typing import Dict
 from pprint import pprint
-from poker2.card import Card, Rank, Suit
 
+from poker2.card import Card, Rank, Suit
 from poker2.enums import Action, GameType, Game, Limit
+from poker2.hand import Combo
 from poker2.handhistory import HandHistory, HandHistoryHeaderExtra, Player, PlayerAction, Seat, Street
 
 module_logger = logging.getLogger(__name__)
@@ -285,7 +286,18 @@ def parse_pokernow(text: str, playermap: Dict[str, Player]) -> HandHistory:
         showdown_actions_lines = showdown_lines
         showdown_actions = [_parse_action_line(line, playermap) for line in showdown_actions_lines]
         result.showdown = Street(showdown_actions, [])
-       
+
+    # populate all seats with proper showdown cards
+    for line in lines:
+        match = _shows_re.match(line)
+        if match is not None:
+            _d = match.groupdict()
+            player = playermap[_d['playername']]
+            seat = next(seat for seat in result.seats if seat.player==player)
+            card1 = _parse_card(_d['card1'])
+            card2 = _parse_card(_d['card2'])
+            seat.combo = Combo(card1, card2)
+            
     return result
 
 def _parse_card(cardstr: str) -> Card:
