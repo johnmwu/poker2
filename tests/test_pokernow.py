@@ -3,6 +3,7 @@ import pytz
 from datetime import datetime
 from decimal import Decimal
 from poker2.card import Card, Rank, Suit
+from poker2.hand import Combo
 
 
 from poker2.handhistory import HandHistoryHeaderExtra, PlayerAction, Seat, Street
@@ -134,14 +135,20 @@ class TestHand1:
                     Seat(
                         seatno=1,
                         stack=Decimal(2040),
-                        combo=None,
+                        combo=Combo(
+                            first=Card(Rank.QUEEN, Suit.CLUBS),
+                            second=Card(Rank.EIGHT, Suit.HEARTS)
+                        ),
                         player=MICHAEL
                     ),
                     Seat(
                         seatno=6,
                         stack=Decimal(1960),
-                        combo=None,
-                        player=BRIAN
+                        combo=Combo(
+                            first=Card(Rank.QUEEN, Suit.HEARTS),
+                            second=Card(Rank.SEVEN, Suit.HEARTS)
+                        ),
+                         player=BRIAN
                     )
                 ]
             ),
