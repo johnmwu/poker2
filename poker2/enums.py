@@ -13,3 +13,5 @@ class Action(Enum):
     POSTBLIND = 5
     SHOW = 6
     COLLECT = 7
+    JOIN = 8
+    RETURNED = 9

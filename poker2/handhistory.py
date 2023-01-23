@@ -11,6 +11,10 @@ from .enums import Game, GameType, Limit, Action
 from .hand import Combo
 
 @dataclass
+class PokerSession:
+    hands: List['HandHistory']
+
+@dataclass
 class HandHistory:
     date: datetime 
 
@@ -27,6 +31,7 @@ class HandHistory:
     header_extra: 'HandHistoryHeaderExtra' 
 
     # streets
+    before_hand: Optional['Street'] = field(default=None) 
     preflop: Optional['Street'] = field(default=None)
     flop: Optional['Street'] = field(default=None)
     turn: Optional['Street'] = field(default=None)

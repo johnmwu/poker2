@@ -7,50 +7,10 @@ from poker2.hand import Combo
 
 
 from poker2.handhistory import HandHistoryHeaderExtra, PlayerAction, Seat, Street
-from poker2.parsers import parse_pokernow, parse_pokernow_header
+from poker2.pokernow_parser import parse_pokernow_hand, parse_pokernow_header, parse_pokernow_logfile
 from poker2.enums import Action, Game, GameType, Limit
-from poker2.examples import MICHAEL, BRIAN
+from poker2.examples import MICHAEL, BRIAN, POKERNOW_HAND1, POKERNOW_HAND2, POKERNOW_HAND3, POKERNOW_SESSION1, PLAYERMAP1
 
-POKERNOW_HAND1 = r'''
-"-- ending hand #7 --",2023-01-14T21:51:55.296Z,167373311529604
-"""brian @ Tf95qWPA1J"" collected 1160 from pot with Full House, Q's over 10's (combination: Q♥, Q♦, Q♠, 10♦, 10♣)",2023-01-14T21:51:55.296Z,167373311529603
-"""brian @ Tf95qWPA1J"" shows a Q♥, 7♥.",2023-01-14T21:51:55.296Z,167373311529602
-"""michael @ VEYRadLj9o"" collected 1160 from pot with Full House, Q's over 10's (combination: Q♣, Q♦, Q♠, 10♦, 10♣)",2023-01-14T21:51:55.296Z,167373311529601
-"""michael @ VEYRadLj9o"" shows a Q♣, 8♥.",2023-01-14T21:51:55.296Z,167373311529600
-"""michael @ VEYRadLj9o"" calls 1000",2023-01-14T21:51:54.490Z,167373311449000
-"""brian @ Tf95qWPA1J"" raises to 1000",2023-01-14T21:51:43.559Z,167373310355900
-"""michael @ VEYRadLj9o"" bets 400",2023-01-14T21:51:16.959Z,167373307695900
-"""brian @ Tf95qWPA1J"" checks",2023-01-14T21:50:52.244Z,167373305224400
-"River: Q♦, 10♦, 10♣, 2♥ [Q♠]",2023-01-14T21:50:48.194Z,167373304819400
-"""brian @ Tf95qWPA1J"" calls 80",2023-01-14T21:50:47.346Z,167373304734600
-"""michael @ VEYRadLj9o"" bets 80",2023-01-14T21:50:41.437Z,167373304143700
-"""brian @ Tf95qWPA1J"" checks",2023-01-14T21:50:18.768Z,167373301876800
-"Turn: Q♦, 10♦, 10♣ [2♥]",2023-01-14T21:50:16.567Z,167373301656700
-"""brian @ Tf95qWPA1J"" calls 30",2023-01-14T21:50:15.724Z,167373301572400
-"""michael @ VEYRadLj9o"" bets 30",2023-01-14T21:50:13.388Z,167373301338800
-"""brian @ Tf95qWPA1J"" checks",2023-01-14T21:49:58.480Z,167373299848000
-"Flop:  [Q♦, 10♦, 10♣]",2023-01-14T21:49:53.833Z,167373299383300
-"""brian @ Tf95qWPA1J"" calls 50",2023-01-14T21:49:53.031Z,167373299303100
-"""michael @ VEYRadLj9o"" raises to 50",2023-01-14T21:49:51.140Z,167373299114000
-"""brian @ Tf95qWPA1J"" posts a big blind of 20",2023-01-14T21:49:44.596Z,167373298459605
-"""michael @ VEYRadLj9o"" posts a small blind of 10",2023-01-14T21:49:44.596Z,167373298459604
-"Your hand is Q♣, 8♥",2023-01-14T21:49:44.596Z,167373298459602
-"Player stacks: #1 ""michael @ VEYRadLj9o"" (2040) | #6 ""brian @ Tf95qWPA1J"" (1960)",2023-01-14T21:49:44.596Z,167373298459601
-"-- starting hand #7 (id: tooolqqevl05)  (No Limit Texas Hold'em) (dealer: ""michael @ VEYRadLj9o"") --",2023-01-14T21:49:44.596Z,167373298459600
-'''
-
-POKERNOW_HAND2 = r'''
-"-- ending hand #6 --",2023-01-14T21:49:41.625Z,167373298162502
-"""brian @ Tf95qWPA1J"" collected 40 from pot",2023-01-14T21:49:41.625Z,167373298162501
-"Uncalled bet of 30 returned to ""brian @ Tf95qWPA1J""",2023-01-14T21:49:41.625Z,167373298162500
-"""michael @ VEYRadLj9o"" folds",2023-01-14T21:49:40.789Z,167373298078900
-"""brian @ Tf95qWPA1J"" raises to 50",2023-01-14T21:49:19.883Z,167373295988300
-"""michael @ VEYRadLj9o"" posts a big blind of 20",2023-01-14T21:49:17.676Z,167373295767605
-"""brian @ Tf95qWPA1J"" posts a small blind of 10",2023-01-14T21:49:17.676Z,167373295767604
-"Your hand is 8♦, J♦",2023-01-14T21:49:17.676Z,167373295767602
-"Player stacks: #1 ""michael @ VEYRadLj9o"" (2060) | #6 ""brian @ Tf95qWPA1J"" (1940)",2023-01-14T21:49:17.676Z,167373295767601
-"-- starting hand #6 (id: imlmnm907ut5)  (No Limit Texas Hold'em) (dealer: ""brian @ Tf95qWPA1J"") --",2023-01-14T21:49:17.676Z,167373295767600
-'''
 
 UTC = pytz.timezone('UTC')
 
@@ -59,8 +19,8 @@ def hand_header(request):
     """Parse hand history header only defined in hand_text
     and returns a PokerNowHandHistory instance.
     """
-    playermap = {'michael': MICHAEL, 'brian': BRIAN}
-    hh = parse_pokernow_header(request.instance.hand_text, playermap)
+    lines = list(reversed(request.instance.hand_text.strip().split('\n')))
+    hh = parse_pokernow_header(lines, PLAYERMAP1)
     return hh
 
 @pytest.fixture
@@ -68,9 +28,132 @@ def hand(request):
     """Parse hand history defined in hand_text
     and returns a PokerNowHandHistory instance.
     """
-    playermap = {'michael': MICHAEL, 'brian': BRIAN}
-    hh = parse_pokernow(request.instance.hand_text, playermap)
+    lines = list(reversed(request.instance.hand_text.strip().split('\n')))
+    hh = parse_pokernow_hand(lines, PLAYERMAP1)
     return hh
+
+@pytest.fixture
+def poker_session(request):
+    """Parse all hand histories in a given pokernow logfile
+    """
+    ps = parse_pokernow_logfile(request.instance.logfile_text, PLAYERMAP1)
+    return ps
+
+
+class TestSession1:
+    logfile_text = POKERNOW_SESSION1
+
+    @pytest.mark.parametrize(
+        ('attribute', 'expected_value'),
+        [
+            ("ident", "ufhrgt2tkrb6"),
+        ]
+    )
+    def test_first_hand(self, poker_session, attribute, expected_value):
+        assert getattr(poker_session.hands[0], attribute) == expected_value
+
+
+class TestHand2:
+    hand_text = POKERNOW_HAND3
+    @pytest.mark.parametrize(
+        ("attribute", "expected_value"),
+        [
+            ("date", UTC.localize(datetime(2023, 1, 14, 21, 47, 8, 939000))),
+            ("ident", "ufhrgt2tkrb6"),
+            ("game", Game.HOLDEM),
+            ("game_type", GameType.CASH),
+            ("limit", Limit.NL),
+            ("max_players", 9),
+            ("seats", 
+                [
+                    Seat(
+                        seatno=1,
+                        stack=Decimal(2000),
+                        combo=Combo(
+                            first=Card(Rank.SEVEN, Suit.HEARTS),
+                            second=Card(Rank.SIX, Suit.HEARTS)
+                        ),
+                        player=MICHAEL
+                    ),
+                    Seat(
+                        seatno=6,
+                        stack=Decimal(2000),
+                        combo=None,
+                        player=BRIAN
+                    )
+                ]
+            ),
+            ("sb", Decimal(10)),
+            ("bb", Decimal(20)),
+            (
+                "button", 
+                Seat(
+                    seatno=1,
+                    stack=Decimal(2000),
+                    combo=Combo(
+                            first=Card(Rank.SEVEN, Suit.HEARTS),
+                            second=Card(Rank.SIX, Suit.HEARTS)
+                    ),
+                    player=MICHAEL
+                )
+            ),
+            (
+                'before_hand',
+                Street(
+                    [
+                        PlayerAction(MICHAEL, Action.JOIN, Decimal(2000)),
+                        PlayerAction(BRIAN, Action.JOIN, Decimal(2000)),
+                    ],
+                    []
+                )
+            ),
+            (
+                'preflop',
+                Street(
+                    [
+                        PlayerAction(MICHAEL, Action.POSTBLIND, Decimal(10)),
+                        PlayerAction(BRIAN, Action.POSTBLIND, Decimal(20)),
+                        PlayerAction(MICHAEL, Action.RAISE, Decimal(50)),
+                        PlayerAction(BRIAN, Action.CALL, Decimal(50)),
+                    ],
+                    []
+                )
+            ),
+            (
+                'flop',
+                Street(
+                    [
+                        PlayerAction(BRIAN, Action.CHECK, None),
+                        PlayerAction(MICHAEL, Action.BET, Decimal(50)),
+                        PlayerAction(BRIAN, Action.FOLD, None),
+                        PlayerAction(MICHAEL, Action.RETURNED, Decimal(50)),
+                        PlayerAction(MICHAEL, Action.COLLECT, Decimal(100))
+                    ],
+                    [
+                        Card(Rank.TWO, Suit.SPADES), 
+                        Card(Rank.SEVEN, Suit.SPADES),
+                        Card(Rank.SIX, Suit.SPADES)
+                    ]
+                )
+            ),
+            (
+                'turn',
+                None
+            ),
+            (
+                'river',
+                None
+            ),
+            (
+                'showdown',
+                None
+            )
+        ],
+    )
+    def test_values_after_parsed(self, hand, attribute, expected_value):
+        assert getattr(hand, attribute) == expected_value
+
+
 
 
 class TestHeader1:
@@ -159,7 +242,10 @@ class TestHand1:
                 Seat(
                     seatno=1,
                     stack=Decimal(2040),
-                    combo=None,
+                    combo=Combo(
+                        first=Card(Rank.QUEEN, Suit.CLUBS),
+                        second=Card(Rank.EIGHT, Suit.HEARTS)
+                    ),
                     player=MICHAEL
                 )
             ),
@@ -233,3 +319,4 @@ class TestHand1:
     )
     def test_values_after_parsed(self, hand, attribute, expected_value):
         assert getattr(hand, attribute) == expected_value
+
